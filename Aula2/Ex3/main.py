@@ -2,20 +2,7 @@
 
 from colorama import Fore, Back, Style
 import argparse
-import math
-
-# maximum_number = input('Máximo número: ')
-def isPrime(value):
-
-    print('\nAnalisyng number ' + str(value))
-
-    for i in range(2, math.sqrt(value)):
-        remainder = value % i
-        print(str(value) + ' / ' + str(i) + ' has remainder ' + str(remainder))
-        if remainder == 0:
-            return False
-
-    return True
+from my_functions import *
 
 def main():
 
@@ -28,15 +15,14 @@ def main():
     print("Starting to compute prime numbers up to " + str(args['maximum_number']))
     count = 0 # initialize the counter
     for i in range(1, args['maximum_number']):
-        if isPrime(i):
+        if my_functions(i):
             print('Number ' + Fore.YELLOW + Back.GREEN + str(i) + Style.RESET_ALL + ' is prime.' )
             count = count + 1
         else:
             print('Number ' + str(i) + ' is not prime.')
 
-    if args['verbose']:
+    if args['showfinaltext']:
         print(Fore.BLUE  + 'I found ' + str(count) + ' prime numbers between 1 and ' + str(args['maximum_number']) + Style.RESET_ALL)
 
 if __name__ == "__main__":
     main()
-
