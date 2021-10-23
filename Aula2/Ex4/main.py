@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import readchar
+from colorama import Fore, Back, Style
 
 def printAllCharsUpTo():
     print('Insira um caracter: ')
@@ -25,13 +26,13 @@ def countNumbersUpto(stop_char):
     while(True):
         print('Type something (X to stop): ')
         pressed_key = readchar.readkey()
-        print('You typed: ' + str(pressed_key))
+        print('You typed: ' + Fore.RED + (pressed_key) + Style.RESET_ALL)
         if str.isnumeric(pressed_key):
             total_numbers += 1
         else:
             total_others += 1
         if pressed_key == 'X':
-            print('Stopped')
+            print(Fore.RED + 'Stopped' + Style.RESET_ALL)
             break
     print('You entered ' + str(total_numbers) + ' numbers.')
     print('You entered ' + str(total_others) + ' others.')
