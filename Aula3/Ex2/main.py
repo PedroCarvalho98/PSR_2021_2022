@@ -2,13 +2,18 @@
 
 def addComplex(x, y):
     return (x[0] + y[0], x[1] + y[1])
+    # pass
 
 def multiplyComplex(x, y):
     aux = (x[0] * y[0] - x[1] * y[1], x[0] * y[1] + x[1] * y[0])
     return aux
+    # pass
 
 def printComplex(x):
     print(str(x[0]) + ' + ' + str(x[1]) + 'i')
+    # r = x[0]
+    # i = x[1]
+    # pass
 
 def main():
     # ex2 a)

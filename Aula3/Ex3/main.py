@@ -10,7 +10,7 @@ def addComplex(x, y):
     return caux
 
 def multiplyComplex(x, y):
-    caux = Complex(x.r * y.r + x.i * y.i, x.r * y.i + x.i * y.r)
+    caux = Complex(x.r * y.r - x.i * y.i, x.r * y.i + x.i * y.r)
     return caux
 
 def printComplex(x):

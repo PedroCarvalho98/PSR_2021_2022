@@ -10,7 +10,7 @@ class Complex:
         self.r = self.r + y.r
         self.i = self.i + y.i
     def multiply(self, y):
-        self.r = self.r * y.r + self.i * y.i
+        self.r = self.r * y.r - self.i * y.i
         self.i = self.r * y.i + self.i * y.r
     def __str__(self):
         return '{self.r} + {self.i}i'.format(self=self)
