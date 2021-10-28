@@ -2,12 +2,22 @@
 
 def addComplex(x, y):
     return (x[0] + y[0], x[1] + y[1])
+    # a = x[0]
+    # b = x[1]
+    # c = y[0]
+    # d = y[1]
     # pass
 
 def multiplyComplex(x, y):
     aux = (x[0] * y[0] - x[1] * y[1], x[0] * y[1] + x[1] * y[0])
     return aux
     # pass
+    # a = x[0]
+    # b = x[1]
+    # c = y[0]
+    # d = y[1]
+    # result_real = (a*c - b*d)
+    # result_im = (a*d + b*c)
 
 def printComplex(x):
     print(str(x[0]) + ' + ' + str(x[1]) + 'i')
