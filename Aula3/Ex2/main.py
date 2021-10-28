@@ -16,8 +16,8 @@ def multiplyComplex(x, y):
     # b = x[1]
     # c = y[0]
     # d = y[1]
-    # result_real = (a*c - b*d)
-    # result_im = (a*d + b*c)
+    # result_real = a*c - b*d
+    # result_im = a*d + b*c
 
 def printComplex(x):
     print(str(x[0]) + ' + ' + str(x[1]) + 'i')
