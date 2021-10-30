@@ -1,15 +1,15 @@
 #!/usr/bin/python3
-# --------------------------------------------------
-# A python script for complex number operations using named tuples and classes
-# Rafael Inacio Siopa.
-# PSR, November 2021.
-# --------------------------------------------------
 
 import argparse
 import math
 from colorama import Fore, Back, Style
 import readchar
 from time import time, ctime
+import random
+import string
+from collections import namedtuple
+
+Input = namedtuple('Input', ['requested', 'received', 'duration'])
 
 parser = argparse.ArgumentParser(description='Definition of test mode')
 parser.add_argument('-mv', '--max_value', type=int, required=True, help='Max number of seconds for time mode or maximum number of inputs for number of inputs mode.\n ')
@@ -31,18 +31,32 @@ def main():
 
     print('Press any key to start the test')
     readchar.readchar()
+    count = 0
     t1 = time()
     t2 = time()
-    count = 0
+    save = []
 
     while (count < N) and (t2 - t1 < tstop):
-        a = t2 - t1
-        print(a)
-        readchar.readchar()
+        to_type = random.choice(string.ascii_lowercase)
+        print('Type letter ' + to_type)
+        t3 = time()
+        typed = readchar.readchar()
+        t4 = time()
+        if typed == ' ':
+            exit()
+        if typed == to_type:
+            print('You typed letter ' + Fore.GREEN + typed + Style.RESET_ALL)
+        else:
+            print('You typed letter ' + Fore.RED + typed + Style.RESET_ALL)
+
+        save.append(Input(requested = to_type, received = typed, duration = (t4 - t3)))
         count = count + 1
         t2 = time()
 
-
+    print('Current test duration (' + str(t2-t1) + ') exceeds maximum of ' + str(args['max_value']))
+    print(Fore.BLUE + 'Test Finished!' + Style.RESET_ALL)
+    # Calcular estatísticas
+    print(save)
 
 if __name__ == '__main__':
     main()
