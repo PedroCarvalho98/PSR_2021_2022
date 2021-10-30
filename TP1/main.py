@@ -57,6 +57,21 @@ def main():
     print(Fore.BLUE + 'Test Finished!' + Style.RESET_ALL)
     # Calcular estatísticas
     print(save)
+    test_duration = t2-t1
+    test_start = ctime(t1)
+    test_end = ctime(t2)
+    number_of_types = len(save)
+    number_of_hits = 0
+    type_average_duration = 0
+    type_hit_average_duration = 0
+    for i in range len(save):
+        if save[i].requested == save[i].received:
+            number_of_hits += 1
+        type_average_duration = save[i].duration + type_average_duration
+
+    type_average_duration = type_average_duration/number_of_types
+    accuracy = number_of_hits/number_of_types
+
 
 if __name__ == '__main__':
     main()
