@@ -132,7 +132,6 @@ def main():
 
     image_processed = image_original_rgb.copy()
     image_processed[mask] = (image_processed[mask] * 0.2).astype(np.uint8)
-    image_processed[mask] = (40, 40, 140)
 
     print(image_original_rgb.dtype)
     print(mask.dtype)
