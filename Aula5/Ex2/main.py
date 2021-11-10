@@ -75,6 +75,47 @@ def main():
     # cv2.waitKey(0)  # wait for a key press before proceeding
 
     # Ex 2d)
+    # # Load image
+    # image_original_rgb = cv2.imread(args['image1'], cv2.IMREAD_COLOR)  # Load an image
+    # image_b, image_g, image_r = cv2.split(image_original_rgb)
+    # ranges = {'b' : {'min' : 0 , 'max': 50},
+    #           'g' : {'min' : 70, 'max' : 256},
+    #           'r' : {'min' : 0, 'max' : 50}}
+    #
+    # # Process image
+    # mins = np.array([ranges['b']['min'],ranges['g']['min'], ranges['r']['min']])
+    # maxs = np.array([ranges['b']['max'], ranges['g']['max'], ranges['r']['max']])
+    # image_processed = cv2.inRange(image_original_rgb, mins, maxs)
+    #
+    # # Visualization
+    #
+    # cv2.imshow('Original', image_original_rgb)  # Display the image
+    # cv2.imshow('Processed b', image_processed)  # Display the image
+    #
+    # cv2.waitKey(0)  # wait for a key press before proceeding
+
+    # Ex 2e)
+    # # Load image
+    # image_original_rgb = cv2.imread(args['image1'], cv2.IMREAD_COLOR)  # Load an image
+    # image_b, image_g, image_r = cv2.split(image_original_rgb)
+    # image_hsv = cv2.cvtColor(image_original_rgb, cv2.COLOR_BGR2HSV)
+    # ranges = {'b' : {'min' : 60 , 'max': 100},
+    #           'g' : {'min' : 150, 'max' : 256},
+    #           'r' : {'min' : 60, 'max' : 100}}
+    #
+    # # Process image
+    # mins = np.array([ranges['b']['min'],ranges['g']['min'], ranges['r']['min']])
+    # maxs = np.array([ranges['b']['max'], ranges['g']['max'], ranges['r']['max']])
+    # image_processed = cv2.inRange(image_hsv, mins, maxs)
+    #
+    # # Visualization
+    #
+    # cv2.imshow('Original', image_original_rgb)  # Display the image
+    # cv2.imshow('Processed b', image_processed)  # Display the image
+    #
+    # cv2.waitKey(0)  # wait for a key press before proceeding
+
+    # Ex 2f)
     # Load image
     image_original_rgb = cv2.imread(args['image1'], cv2.IMREAD_COLOR)  # Load an image
     image_b, image_g, image_r = cv2.split(image_original_rgb)
@@ -85,12 +126,22 @@ def main():
     # Process image
     mins = np.array([ranges['b']['min'],ranges['g']['min'], ranges['r']['min']])
     maxs = np.array([ranges['b']['max'], ranges['g']['max'], ranges['r']['max']])
-    image_processed = cv2.inRange(image_original_rgb, mins, maxs)
+    mask = cv2.inRange(image_original_rgb, mins, maxs)
+    # Conversion from numpy from uint8 to bool
+    mask = mask.astype(np.bool)
+
+    image_processed = image_original_rgb.copy()
+    image_processed[mask] = (image_processed[mask] * 0.2).astype(np.uint8)
+    image_processed[mask] = (40, 40, 140)
+
+    print(image_original_rgb.dtype)
+    print(mask.dtype)
+    print(image_processed.dtype)
 
     # Visualization
-
     cv2.imshow('Original', image_original_rgb)  # Display the image
-    cv2.imshow('Processed b', image_processed)  # Display the image
+    cv2.imshow('Mask', mask.astype(np.uint8) * 255)  # Display the image
+    cv2.imshow('Processed', image_processed)  # Display the image
 
     cv2.waitKey(0)  # wait for a key press before proceeding
 
