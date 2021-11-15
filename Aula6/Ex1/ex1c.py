@@ -6,27 +6,29 @@
 import numpy as np
 import cv2
 
+isdown = False
+color = (255, 0, 0)
 
 def mouse_paint(event, x, y, flags, params):
+    # print(x, y)
+    global image, window_name, isdown, color
+    if event == cv2.EVENT_MOUSEMOVE:
+        if isdown == True:
+            image[y, x] = color
     if event == cv2.EVENT_LBUTTONDOWN:
-        if params == 82 or params == 114:
-            image[x, y] = (0, 0, 255)
-        if params == 71 or params == 103:
-            image[x, y] = (0, 255, 0)
-        if params == 66 or params == 98:
-            image[x, y] = (255, 0, 0)
+        isdown = True
+    if event == cv2.EVENT_LBUTTONUP:
+        isdown = False
 
 def main():
     # Create white window
-    global image
-    image = np.ones((600, 400, 3)) * 255
+    global image, window_name, choice
+    image = np.ones((400, 600, 3)) * 255    #rows and columms
     window_name = "Paint - Whiteboard"
     cv2.imshow(window_name, image)
     image = image.astype(np.uint8)
-    print(image.dtype)
-    print(image[0, 0][0])
     print("Paint - Whiteboard")
-
+    cv2.setMouseCallback(window_name, mouse_paint)
     while True:
         print("Colors to write: ")
         print("Press r for Red")
@@ -34,13 +36,20 @@ def main():
         print("Press b for Blue")
         print("Press s to Stop")
 
-        choice = cv2.waitKey(0);
-        # print(choice)
-        print("Tecla pressionada: " + chr(choice))
-        if choice == 83 or choice == 115:
-            break
+        choice = cv2.waitKey(20);
+        cv2.imshow(window_name, image)
+        cv2.waitKey(20)
+        print("Tecla pressionada: " + str(choice))
+        if choice != -1:
+            if choice == ord('S') or choice == ord('s'):
+                break
+            if choice == ord('R') or choice == ord('r'):
+                color = (0, 0, 255)
+            if choice == ord('G') or choice == ord('g'):
+                color = (0, 255, 0)
+            if choice == ord('B') or choice == ord('b'):
+                color = (255, 0, 0)
 
-        cv2.setMouseCallback(window_name, mouse_paint, choice)
 
 
 
