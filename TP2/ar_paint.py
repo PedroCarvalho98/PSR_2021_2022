@@ -20,7 +20,27 @@ mouse_toggle = False
 global whiteboard
 previous_mouse_point = (0, 0)
 wbinsteadframe = False
+drawing = False
+ix, iy = -1, -1
 
+def draw_square(cursor, xposition, yposition, flags, param):
+    global btn_down
+
+    if cursor == cv2.EVENT_LBUTTONDOWN and btn_down:
+        # if you realease the button, finish the square
+        pass
+def draw_circle(cursor, xposition, yposition, flags, param):
+    global ix, iy, drawing
+
+    if cursor == cv2.EVENT_LBUTTONDOWN:
+        drawing = True
+        # we take note of where that mouse is located
+        ix, iy = xposition, yposition
+    elif cursor == cv2.EVENT_MOUSEMOVE:
+        radius = int(((ix-xposition)**2 + (iy - yposition)**2)**0.5)
+        cv2.circle(param, (ix, iy), radius, painting_color, thickness=1)
+    elif cursor == cv2.EVENT_LBUTTONUP:
+        drawing = False
 
 def onMouse(cursor, xposition, yposition, flags, param):
     global previous_mouse_point
