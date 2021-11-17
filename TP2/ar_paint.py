@@ -1,33 +1,69 @@
 #!/usr/bin/python3
 
 import argparse
+import math
 import cv2
 import numpy as np
 import json
 from time import ctime, time
 from colorama import Fore, Back, Style
 from termcolor import cprint
-
+import copy
+import image_slicer
 
 # Variable initializing values
 radius = 10
 painting_color = (0, 0, 0)
 previous_point = (0, 0)
+global mouse_coordinates
+mouse_toggle = False
+global whiteboard
+previous_mouse_point = (0, 0)
+wbinsteadframe = False
+
+
+def onMouse(cursor, xposition, yposition, flags, param):
+    global previous_mouse_point
+
+    # Calls the function when mouse_toggle is set to True and mouse is moving
+    if cursor == cv2.EVENT_MOUSEMOVE and mouse_toggle == True:
+
+        # Draws line with the mouse position
+        if previous_mouse_point == (0, 0):
+            previous_mouse_point = (xposition, yposition)
+
+        aux = (previous_point[0] - xposition, previous_point[1] - yposition)
+        if math.sqrt(aux[0] ** 2 + aux[1] ** 2) > 320:
+            cv2.circle(param, (xposition, yposition), radius, painting_color, -1)
+        else:
+            cv2.line(img=param,
+                     pt1=previous_mouse_point,
+                     pt2=(xposition, yposition),
+                     color=painting_color,
+                     thickness=radius)
+        previous_mouse_point = (xposition, yposition)
 
 
 def main():
     # Global variables
-    global radius
-    global painting_color
-    global previous_point
+    global radius, painting_color, previous_point, mouse_toggle
 
     # Argparse arguments for program Initialization
     parser = argparse.ArgumentParser()
     parser.add_argument('-j',
-                        '--json JSON',
+                        '--json_JSON',
                         type=str,
                         required=True,
                         help='Full path to json file.')
+    parser.add_argument('-usp',
+                        '--use_shake_prevention',
+                        action='store_true',
+                        help='To use shake prevention.')
+    parser.add_argument('-ar',
+                        '--augmented_reality',
+                        action='store_true',
+                        help='To draw on displayed frame')
+
     args = vars(parser.parse_args())
 
     # Creating all of the windows
@@ -36,7 +72,7 @@ def main():
     window_original_frame = 'Original Frame'
 
     # Open imported json
-    lim = open(args['json JSON'])
+    lim = open(args['json_JSON'])
     ranges = json.load(lim)
     lim.close()
 
@@ -50,6 +86,9 @@ def main():
     print("- RED PAINT   " + Back.RED + "      " + Style.RESET_ALL + " -> PRESS " + Fore.RED + "'r'" + Fore.RESET)
     print("- GREEN PAINT " + Back.GREEN + "      " + Style.RESET_ALL + " -> PRESS " + Fore.GREEN + "'g'" + Fore.RESET)
     print("- BLUE PAINT  " + Back.BLUE + "      " + Style.RESET_ALL + " -> PRESS " + Fore.BLUE + "'b'" + Fore.RESET)
+    print("- ERASE       " + Back.WHITE + "      " + Style.RESET_ALL + " -> PRESS 'e'")
+    print("- MOUSE MODE    " + u"\U0001F5B0" + "   -> PRESS 'm'")
+    print("- SCREEN MODE   " + u"\U0001F5AF" + "   -> PRESS 'o'")
     print("- THICKER BRUSH " + u"\U0001F58C" + "   -> PRESS '" + "+" + "'")
     print("- THINNER BRUSH " + u"\U0001F58C" + "   -> PRESS '-'")
 
@@ -57,7 +96,12 @@ def main():
     capture = cv2.VideoCapture(0)
     _, frame = capture.read()
     width, height, channel = frame.shape
-    whiteboard = np.ones((width, height, channel), np.uint8) * 255
+
+    if args['augmented_reality']:
+        whiteboard = np.ones((width, height, channel), np.uint8)
+        painting_color = (255,0,0)
+    else:
+        whiteboard = np.ones((width, height, channel), np.uint8) * 255
 
     while True:
         # Read each frame of the video capture
@@ -79,7 +123,7 @@ def main():
         # Create mask using the Json extracted Thresholds
         mask_segmented = cv2.inRange(image_for_segmentation,
                                      min_thresh, max_thresh)
-        mask_object = np.zeros((width, height), dtype="uint8")
+
         # Find all the contours of white blobs in the mask_segmented
         contours, hierarchy = cv2.findContours(
             mask_segmented, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -88,12 +132,12 @@ def main():
         if len(contours) != 0:
             c = max(contours, key=cv2.contourArea)
             area = cv2.contourArea(c)
+
             # Starts painting only if it's bigger than threshold defined
             if area > 400:
                 # Extract coordinates of bounding box
                 x, y, w, h = cv2.boundingRect(c)
-                # Define de mask
-                mask_object[x:x+h, y:y+w] = 255
+
                 # Calculate centroid and draw the red cross there
                 centroid = (int(x + w / 2), int(y + h / 2))
                 cv2.drawMarker(frame, centroid,
@@ -104,27 +148,70 @@ def main():
                 # Draw on the image
                 if previous_point == (0, 0):
                     previous_point = centroid
-                cv2.line(img=whiteboard,
-                         pt1=previous_point,
-                         pt2=centroid,
-                         color=painting_color,
-                         thickness=radius)
-                previous_point = centroid
 
-        # Conversion from numpy from uint8 to bool
-        mask_object = mask_object.astype(np.bool_)
-        frame[mask_object] = (0, 255, 0)
-        # Defining the window and plotting the whiteboard
-        cv2.namedWindow(window_whiteboard, cv2.WINDOW_NORMAL)
-        cv2.imshow(window_whiteboard, whiteboard)
+                # User shake prevention working without mouse functionality
+                if args['use_shake_prevention'] and mouse_toggle == False and args['augmented_reality'] == False:
+                    aux = (previous_point[0] - centroid[0], previous_point[1] - centroid[1])
 
-        # Defining the window and plotting the image_segmented
-        cv2.namedWindow(window_segmented, cv2.WINDOW_NORMAL)
-        cv2.imshow(window_segmented, mask_segmented)
+                    if math.sqrt(aux[0] ** 2 + aux[1] ** 2) > 320:
+                        cv2.circle(whiteboard, centroid, radius, painting_color, -1)
+                    else:
+                        cv2.line(img=whiteboard,
+                                 pt1=previous_point,
+                                 pt2=centroid,
+                                 color=painting_color,
+                                 thickness=radius)
+                    previous_point = centroid
 
-        # Defining the window and plotting the original frame
-        cv2.namedWindow(window_original_frame, cv2.WINDOW_NORMAL)
-        cv2.imshow(window_original_frame, frame)
+                # Only draw with mouse moving functionality
+                elif mouse_toggle == True and args['use_shake_prevention'] == True and args[
+                    'augmented_reality'] == False:
+                    cv2.setMouseCallback(window_whiteboard, onMouse, param=whiteboard)
+
+                # Normal mode without mouse functionality and USP
+                elif mouse_toggle == False and args['use_shake_prevention'] == False and args['augmented_reality'] == False:
+                    cv2.line(img=whiteboard,
+                             pt1=previous_point,
+                             pt2=centroid,
+                             color=painting_color,
+                             thickness=radius)
+                    previous_point = centroid
+
+                else:
+                    cv2.line(img=whiteboard,
+                             pt1=previous_point,
+                             pt2=centroid,
+                             color=painting_color,
+                             thickness=radius)
+                    previous_point = centroid
+
+        if args['augmented_reality'] == True:
+            frame_painting = cv2.bitwise_or(frame, whiteboard)
+
+            # Defining the window and plotting the image_segmented
+            cv2.namedWindow(window_segmented, cv2.WINDOW_NORMAL)
+            cv2.imshow(window_segmented, mask_segmented)
+
+            # Defining the window and plotting the original frame
+            cv2.namedWindow(window_original_frame, cv2.WINDOW_NORMAL)
+            cv2.imshow(window_original_frame, frame)
+
+            # Display the new image using frame as whiteboard
+            cv2.namedWindow('Frame Painting', cv2.WINDOW_NORMAL)
+            cv2.imshow('Frame Painting', frame_painting)
+
+        else:
+            # Defining the window and plotting the whiteboard
+            cv2.namedWindow(window_whiteboard, cv2.WINDOW_NORMAL)
+            cv2.imshow(window_whiteboard, whiteboard)
+
+            # Defining the window and plotting the image_segmented
+            cv2.namedWindow(window_segmented, cv2.WINDOW_NORMAL)
+            cv2.imshow(window_segmented, mask_segmented)
+
+            # Defining the window and plotting the original frame
+            cv2.namedWindow(window_original_frame, cv2.WINDOW_NORMAL)
+            cv2.imshow(window_original_frame, frame)
 
         key = cv2.waitKey(10)
 
@@ -142,6 +229,10 @@ def main():
             painting_color = (255, 0, 0)
             print('Pencil color ' + Fore.BLUE + 'Blue' + Fore.RESET)
 
+        elif key == ord('e'):
+            painting_color = (255,255,255)
+            print('You Turned the ' + Fore.BLUE + 'Eraser' + Fore.RESET + ' on.')
+
         elif key == ord('+'):
             radius += 1
             print('Pencil size' + Fore.GREEN +
@@ -153,7 +244,7 @@ def main():
             else:
                 radius -= 1
                 print('Pencil size' + Fore.RED +
-                  ' decreased ' + Fore.RESET + 'to ' + str(radius))
+                      ' decreased ' + Fore.RESET + 'to ' + str(radius))
 
         elif key == ord('c'):
             whiteboard = np.ones((width, height, channel), np.uint8) * 255
@@ -164,6 +255,14 @@ def main():
             time_string = ctime(time()).replace(' ', '_')
             file_name = "Drawing_" + time_string + ".png"
             cv2.imwrite(file_name, whiteboard)
+
+        elif args['use_shake_prevention'] and key == ord('m'):
+            mouse_toggle = True
+            print('Now you can move your mouse to paint')
+
+        elif args['use_shake_prevention'] and key == ord('o'):
+            mouse_toggle = False
+            print('You can no longer use your mouse to paint')
 
         elif key == ord('q'):
             break

@@ -8,16 +8,18 @@ from time import ctime, time
 from colorama import Fore, Back, Style
 from termcolor import cprint
 
+
 # Variable initializing values
 radius = 10
 painting_color = (0, 0, 0)
+previous_point = (0, 0)
 
 
 def main():
-
     # Global variables
     global radius
     global painting_color
+    global previous_point
 
     # Argparse arguments for program Initialization
     parser = argparse.ArgumentParser()
@@ -39,26 +41,23 @@ def main():
     lim.close()
 
     # Print list of Commands
-    start = "\033[1m"
-    end = "\033[0;0m"
     print('''
     Here is your Command List
     ------------------------- ''')
-    print("- TO QUIT       "+u"\U000026D4"+"    -> PRESS 'q'")
-    print("- TO CLEAR      "+u"\U0001F195"+"   -> PRESS 'c'")
-    print("- TO SAVE       "+u"\U0001f4be"+"   -> PRESS 'w'")
-    print("- RED PAINT   " + Back.RED + "      "+ Style.RESET_ALL +" -> PRESS "+ Fore.RED+"'r'"+Fore.RESET )
-    print("- GREEN PAINT " + Back.GREEN + "      "+ Style.RESET_ALL +" -> PRESS "+ Fore.GREEN+"'g'"+Fore.RESET )
-    print("- BLUE PAINT  " + Back.BLUE + "      "+ Style.RESET_ALL +" -> PRESS "+ Fore.BLUE+"'b'"+Fore.RESET )
-    print(start + "- THICKER BRUSH "+ u"\U0001F58C"+ end + "   -> PRESS '"+start+"+"+end+"'")
-    print("- THINNER BRUSH "+ u"\U0001F58C"+"   -> PRESS '-'")
+    print("- TO QUIT       " + u"\U000026D4" + "    -> PRESS 'q'")
+    print("- TO CLEAR      " + u"\U0001F195" + "   -> PRESS 'c'")
+    print("- TO SAVE       " + u"\U0001f4be" + "   -> PRESS 'w'")
+    print("- RED PAINT   " + Back.RED + "      " + Style.RESET_ALL + " -> PRESS " + Fore.RED + "'r'" + Fore.RESET)
+    print("- GREEN PAINT " + Back.GREEN + "      " + Style.RESET_ALL + " -> PRESS " + Fore.GREEN + "'g'" + Fore.RESET)
+    print("- BLUE PAINT  " + Back.BLUE + "      " + Style.RESET_ALL + " -> PRESS " + Fore.BLUE + "'b'" + Fore.RESET)
+    print("- THICKER BRUSH " + u"\U0001F58C" + "   -> PRESS '" + "+" + "'")
+    print("- THINNER BRUSH " + u"\U0001F58C" + "   -> PRESS '-'")
 
     # Initialize canvas size with one video capture
     capture = cv2.VideoCapture(0)
     _, frame = capture.read()
     width, height, channel = frame.shape
     whiteboard = np.ones((width, height, channel), np.uint8) * 255
-    centroid_before = (int(width/2), int(height/2))
 
     while True:
         # Read each frame of the video capture
@@ -83,18 +82,14 @@ def main():
 
         # Find all the contours of white blobs in the mask_segmented
         connectivity = 4
-        output = cv2.connectedComponentsWithStats(mask_segmented, connectivity, cv2.CV_32S)
-        (numLabels, labels, stats, centroids) = output
-        mask = np.zeros((width, height), dtype="uint8")
+        numlabels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask_segmented, connectivity, cv2.CV_32S)
+        mask_object = np.zeros((width, height), dtype="uint8")
         maxarea = 0
         ind = 1
-        # loop over the number of unique connected component labels, skipping
-        # over the first label (as label zero is the background)
-        for i in range(1, numLabels):
-            # extract the connected component statistics for the current
-            # label
+        # If it finds any contours >0, it calculates one with max. area
+        for i in range(1, numlabels):
             area = stats[i, cv2.CC_STAT_AREA]
-            if maxarea < area and area > 150:
+            if maxarea < area and area > 400:
                 maxarea = area
                 ind = i
 
@@ -103,19 +98,18 @@ def main():
         w = stats[ind, cv2.CC_STAT_WIDTH]
         h = stats[ind, cv2.CC_STAT_HEIGHT]
         (cX, cY) = centroids[ind]
-        # clone our original image (so we can draw on it) and then draw
-        # a bounding box surrounding the connected component along with
-        # a circle corresponding to the centroid
-        cv2.drawMarker(frame, (int(cX), int(cY)), color=(0, 0, 255), markerType=cv2.MARKER_CROSS, thickness=3)
-        cv2.line(img=whiteboard, pt1=centroid_before, pt2=(int(cX), int(cY)), color=painting_color,thickness=radius)
-        centroid_before = (int(cX), int(cY))
-        # construct a mask for the current connected component by
-        # finding a pixels in the labels array that have the current
-        # connected component ID
-        componentMask = (labels == ind).astype("uint8") * 255
-        mask = cv2.bitwise_or(mask, componentMask)
-        # show our output image and connected component mask
-        cv2.waitKey(0)
+        centroid = (int(cX), int(cY))
+        mask_object[x:x+w, y:y+h] = 255
+        cv2.drawMarker(frame, centroid, color=(0, 0, 255), markerType=cv2.MARKER_CROSS, thickness=3)
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), -1)
+        if previous_point == (0, 0):
+            previous_point = centroid
+        cv2.line(img=whiteboard,
+             pt1=previous_point,
+             pt2=centroid,
+             color=painting_color,
+             thickness=radius)
+        previous_point = centroid
 
         # Defining the window and plotting the whiteboard
         cv2.namedWindow(window_whiteboard, cv2.WINDOW_NORMAL)
@@ -147,13 +141,15 @@ def main():
 
         elif key == ord('+'):
             radius += 1
-            print('Pencil size'+Fore.GREEN+
-                  ' increased '+Fore.RESET + 'to ' + str(radius))
+            print('Pencil size' + Fore.GREEN +
+                  ' increased ' + Fore.RESET + 'to ' + str(radius))
 
         elif key == ord('-'):
-            if radius != 1:
+            if radius == 1:
+                print("Pencil size minimum reached!")
+            else:
                 radius -= 1
-            print('Pencil size' + Fore.RED +
+                print('Pencil size' + Fore.RED +
                   ' decreased ' + Fore.RESET + 'to ' + str(radius))
 
         elif key == ord('c'):
