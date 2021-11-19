@@ -6,10 +6,14 @@ import cv2
 import numpy as np
 import json
 from time import ctime, time
+from numpy.linalg import norm
+import readchar
 from colorama import Fore, Back, Style
 from termcolor import cprint
 import copy
-import image_slicer
+# from pynput.keyboard import Key, Controller
+# import keyboard
+
 
 # Variable initializing values
 radius = 10
@@ -19,28 +23,40 @@ global mouse_coordinates
 mouse_toggle = False
 global whiteboard
 previous_mouse_point = (0, 0)
-wbinsteadframe = False
-drawing = False
-ix, iy = -1, -1
+global drawing_mode
+x_previous = 0
+y_previous = 0
+global frame_painting
+alpha = 1
+draw_square = False
+draw_circle = False
+previous_point_shape = (0, 0)
+what_to_draw = None
 
-def draw_square(cursor, xposition, yposition, flags, param):
-    global btn_down
+def onShapes(cursor, xposition, yposition, flags, param):
+    global previous_point_shape, cX,cY, circle_radius, what_to_draw
+    whiteboard_copy = param.copy()
+    if draw_square == True or draw_circle == True:
+        print('Entrou')
+        if previous_point_shape == (0, 0):
+            previous_point_shape = (xposition, yposition)
+            print(previous_point_shape)
 
-    if cursor == cv2.EVENT_LBUTTONDOWN and btn_down:
-        # if you realease the button, finish the square
-        pass
-def draw_circle(cursor, xposition, yposition, flags, param):
-    global ix, iy, drawing
-
-    if cursor == cv2.EVENT_LBUTTONDOWN:
-        drawing = True
-        # we take note of where that mouse is located
-        ix, iy = xposition, yposition
-    elif cursor == cv2.EVENT_MOUSEMOVE:
-        radius = int(((ix-xposition)**2 + (iy - yposition)**2)**0.5)
-        cv2.circle(param, (ix, iy), radius, painting_color, thickness=1)
-    elif cursor == cv2.EVENT_LBUTTONUP:
-        drawing = False
+        (cX, cY) = (xposition, yposition)
+        if draw_square == True:
+            cv2.rectangle(whiteboard_copy, previous_point_shape, (cX, cY), painting_color, radius) # animação do quadrado mexer-se
+        elif draw_circle == True:
+            aux = (cX - previous_point_shape[0], cY - previous_point_shape[1])
+            circle_radius = math.sqrt(aux[0] ** 2 + aux[1] ** 2)
+            cv2.circle(whiteboard_copy, previous_point_shape, int(circle_radius), painting_color, radius)
+        cv2.imshow('Pynting', whiteboard_copy)
+    elif draw_square == False and what_to_draw == ord('s'):
+        print('Sair')
+        cv2.rectangle(param, previous_point_shape, (cX, cY), painting_color, radius)   # por o quadrado fixo no whiteboard
+        return
+    elif draw_circle == False and what_to_draw == ord('d'):
+        cv2.circle(param, previous_point_shape, int(circle_radius), painting_color, radius)
+        return
 
 def onMouse(cursor, xposition, yposition, flags, param):
     global previous_mouse_point
@@ -66,7 +82,7 @@ def onMouse(cursor, xposition, yposition, flags, param):
 
 def main():
     # Global variables
-    global radius, painting_color, previous_point, mouse_toggle
+    global radius, painting_color, previous_point, mouse_toggle, frame_painting, alpha, draw_square, draw_circle, what_to_draw, previous_point_shape
 
     # Argparse arguments for program Initialization
     parser = argparse.ArgumentParser()
@@ -100,17 +116,23 @@ def main():
     print('''
     Here is your Command List
     ------------------------- ''')
-    print("- TO QUIT       " + u"\U000026D4" + "    -> PRESS 'q'")
+    print("- TO QUIT       " + u"\U000026D4" + "   -> PRESS 'q'")
     print("- TO CLEAR      " + u"\U0001F195" + "   -> PRESS 'c'")
     print("- TO SAVE       " + u"\U0001f4be" + "   -> PRESS 'w'")
-    print("- RED PAINT   " + Back.RED + "      " + Style.RESET_ALL + " -> PRESS " + Fore.RED + "'r'" + Fore.RESET)
-    print("- GREEN PAINT " + Back.GREEN + "      " + Style.RESET_ALL + " -> PRESS " + Fore.GREEN + "'g'" + Fore.RESET)
-    print("- BLUE PAINT  " + Back.BLUE + "      " + Style.RESET_ALL + " -> PRESS " + Fore.BLUE + "'b'" + Fore.RESET)
-    print("- ERASE       " + Back.WHITE + "      " + Style.RESET_ALL + " -> PRESS 'e'")
-    print("- MOUSE MODE    " + u"\U0001F5B0" + "   -> PRESS 'm'")
-    print("- SCREEN MODE   " + u"\U0001F5AF" + "   -> PRESS 'o'")
-    print("- THICKER BRUSH " + u"\U0001F58C" + "   -> PRESS '" + "+" + "'")
-    print("- THINNER BRUSH " + u"\U0001F58C" + "   -> PRESS '-'")
+    print("- RED PAINT    " + Back.RED + "      " + Style.RESET_ALL + " -> PRESS " + Fore.RED + "'r'" + Fore.RESET)
+    print("- GREEN PAINT  " + Back.GREEN + "      " + Style.RESET_ALL + " -> PRESS " + Fore.GREEN + "'g'" + Fore.RESET)
+    print("- BLUE PAINT   " + Back.BLUE + "      " + Style.RESET_ALL + " -> PRESS " + Fore.BLUE + "'b'" + Fore.RESET)
+    print("- PINK PAINT   " + Back.MAGENTA + "      " + Style.RESET_ALL + " -> PRESS " + Fore.MAGENTA + "'p'" + Fore.RESET)
+    print("- ORANGE PAINT " + Back.LIGHTRED_EX + "      " + Style.RESET_ALL + " -> PRESS " + Fore.LIGHTRED_EX + "'o'" + Fore.RESET)
+    print("- YELLOW PAINT " + Back.LIGHTYELLOW_EX + "      " + Style.RESET_ALL + " -> PRESS " + Fore.LIGHTYELLOW_EX + "'y'" + Fore.RESET)
+    print("- ERASE        " + Back.WHITE + "      " + Style.RESET_ALL + " -> PRESS 'e'")
+    print("-TRANSPARENCY +" + " \u2b1c " + "   -> PRESS " + Fore.GREEN + "'h'" + Fore.RESET )
+    print("-TRANSPARENCY -" + " \U0001f533" + "   -> PRESS " + Fore.RED + "'l'" + Fore.RESET)
+
+    print("- MOUSE MODE    " + u"\U0001F5B1" + "    -> PRESS 'm'")
+    print("- SCREEN MODE   " + u"\U0001F4FA" + "   -> PRESS 'n'")
+    print("- THICKER BRUSH " + u"\U0001F58C" + "    -> PRESS '" + "+" + "'")
+    print("- THINNER BRUSH " + u"\U0001F58C" + "    -> PRESS '-'")
 
     # Initialize canvas size with one video capture
     capture = cv2.VideoCapture(0)
@@ -119,7 +141,7 @@ def main():
 
     if args['augmented_reality']:
         whiteboard = np.ones((width, height, channel), np.uint8)
-        painting_color = (255,0,0)
+        painting_color = (255, 0, 0)
     else:
         whiteboard = np.ones((width, height, channel), np.uint8) * 255
 
@@ -157,6 +179,10 @@ def main():
             if area > 400:
                 # Extract coordinates of bounding box
                 x, y, w, h = cv2.boundingRect(c)
+
+                # Draw a green rectangle around the drawer object
+                cv2.rectangle(image_for_segmentation, (x,y), (x + w + 20, y + h + 20), (0,255,0), -1)
+                frame = cv2.addWeighted(image_for_segmentation, 0.2, frame, 0.8, 0)
 
                 # Calculate centroid and draw the red cross there
                 centroid = (int(x + w / 2), int(y + h / 2))
@@ -204,9 +230,10 @@ def main():
                              color=painting_color,
                              thickness=radius)
                     previous_point = centroid
-
-        if args['augmented_reality'] == True:
+        if args['augmented_reality']:
             frame_painting = cv2.bitwise_or(frame, whiteboard)
+
+            frame_painting = cv2.addWeighted(frame_painting, alpha, frame, 1 - alpha, 0)
 
             # Defining the window and plotting the image_segmented
             cv2.namedWindow(window_segmented, cv2.WINDOW_NORMAL)
@@ -234,6 +261,7 @@ def main():
             cv2.imshow(window_original_frame, frame)
 
         key = cv2.waitKey(10)
+        # keyboard = Controller()
 
         # Defining all keyboard shortcuts and there functions
         if key == ord('r'):
@@ -249,9 +277,25 @@ def main():
             painting_color = (255, 0, 0)
             print('Pencil color ' + Fore.BLUE + 'Blue' + Fore.RESET)
 
+        elif key == ord('p'):
+            painting_color = (180, 105, 255)
+            print('Pencil color ' + Fore.MAGENTA + 'Pink' + Fore.RESET)
+
+        elif key == ord('y'):
+            painting_color = (0, 255, 255)
+            print('Pencil color ' + Fore.LIGHTYELLOW_EX + 'Yellow' + Fore.RESET)
+
+        elif key == ord('o'):
+            painting_color = (0, 165, 255)
+            print('Pencil color ' + Fore.LIGHTRED_EX + 'Orange' + Fore.RESET)
+
         elif key == ord('e'):
-            painting_color = (255,255,255)
-            print('You Turned the ' + Fore.BLUE + 'Eraser' + Fore.RESET + ' on.')
+            if args['augmented_reality']:
+                painting_color = (0, 0, 0)
+                print('You Turned the ' + Fore.BLUE + 'Eraser' + Fore.RESET + ' on.')
+            else:
+                painting_color = (255, 255, 255)
+                print('You Turned the ' + Fore.BLUE + 'Eraser' + Fore.RESET + ' on.')
 
         elif key == ord('+'):
             radius += 1
@@ -266,23 +310,60 @@ def main():
                 print('Pencil size' + Fore.RED +
                       ' decreased ' + Fore.RESET + 'to ' + str(radius))
 
+        elif key == ord('h'):
+            alpha -= 0.05
+            print('Transparency ' + Fore.GREEN +
+                  ' set to  ' + Fore.RESET + str(100-(round(alpha*100))) + '%')
+
+        elif key == ord('l'):
+            alpha += 0.05
+            print('Transparency ' + Fore.RED +
+                  ' set to ' + Fore.RESET + str(100-(round(alpha * 100))) + '%')
+
         elif key == ord('c'):
-            whiteboard = np.ones((width, height, channel), np.uint8) * 255
-            cprint('Nice job, you just killed a masterpiece...'
-                   , color='white', on_color='on_red', attrs=['blink'])
+            if args['augmented_reality']:
+                whiteboard = np.ones((width, height, channel), np.uint8)
+                cprint('Nice job, you just killed a masterpiece...'
+                       , color='white', on_color='on_red', attrs=['blink'])
+
+            else:
+                whiteboard = np.ones((width, height, channel), np.uint8) * 255
+                cprint('Nice job, you just killed a masterpiece...'
+                       , color='white', on_color='on_red', attrs=['blink'])
 
         elif key == ord('w'):
-            time_string = ctime(time()).replace(' ', '_')
-            file_name = "Drawing_" + time_string + ".png"
-            cv2.imwrite(file_name, whiteboard)
+            if args['augmented_reality']:
+                time_string = ctime(time()).replace(' ', '_')
+                file_name = "Drawing_" + time_string + ".png"
+                cv2.imwrite(file_name, frame_painting)
+            else:
+                time_string = ctime(time()).replace(' ', '_')
+                file_name = "Drawing_" + time_string + ".png"
+                cv2.imwrite(file_name, whiteboard)
 
         elif args['use_shake_prevention'] and key == ord('m'):
             mouse_toggle = True
             print('Now you can move your mouse to paint')
 
-        elif args['use_shake_prevention'] and key == ord('o'):
+        elif args['use_shake_prevention'] and key == ord('n'):
             mouse_toggle = False
             print('You can no longer use your mouse to paint')
+
+        elif key == ord('s'):
+            print('Draw Square')
+            if draw_square == False:
+                previous_point_shape = (0, 0)
+            draw_square = not draw_square
+            what_to_draw = key
+            cv2.setMouseCallback(window_whiteboard, onShapes, param=whiteboard)
+
+        elif key == ord('d'):
+            print('Draw Circle')
+            if draw_circle == False:
+                previous_point_shape = (0, 0)
+            draw_circle = not draw_circle
+            what_to_draw = key
+            cv2.setMouseCallback(window_whiteboard, onShapes, param=whiteboard)
 
         elif key == ord('q'):
             break
