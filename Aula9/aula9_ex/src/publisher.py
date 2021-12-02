@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 from std_msgs.msg import String
-from psr_aula8_ex3_p3.msg import Dog
+from Aula9_ex.msg import Dog
 
 
 def main():
