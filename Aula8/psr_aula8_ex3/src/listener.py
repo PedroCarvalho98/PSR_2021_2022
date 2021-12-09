@@ -1,26 +1,36 @@
 #!/usr/bin/python3
+import argparse
 
 import rospy
 from std_msgs.msg import String
 
 
-def callback(data):
-    rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
+def callbackMessageReceived(data):
+    rospy.loginfo(rospy.get_caller_id() + "%s", data.data)
 
 
-def listener():
-    # In ROS, nodes are uniquely named. If two nodes with the same
-    # name are launched, the previous one is kicked off. The
-    # anonymous=True flag means that rospy will choose a unique
-    # name for our 'listener' node so that multiple listeners can
-    # run simultaneously.
-    rospy.init_node('listener', anonymous=True)
+def main():
+    # ------------------------------------------------------
+    # Initialization
+    # ------------------------------------------------------
+    parser = argparse.ArgumentParser(description='Ask topic')
+    parser.add_argument('--topic1', type = str, help='Topic1', default='A1')
+    parser.add_argument('--topic2', type=str, help='Topic2')
+    args = vars(parser.parse_args())
+    print(args)
 
-    rospy.Subscriber("chatter", String, callback)
+    rospy.init_node('Sub', anonymous=True)
 
-    # spin() simply keeps python from exiting until this node is stopped
+    rospy.Subscriber(args['topic1'], String, callbackMessageReceived)
+    if not args['topic2'] is None:
+        rospy.Subscriber(args['topic2'], String, callbackMessageReceived)
+
+    # ------------------------------------------------------
+    # Execution
+    # ------------------------------------------------------
+
     rospy.spin()
 
 
 if __name__ == '__main__':
-    listener()
+    main()
